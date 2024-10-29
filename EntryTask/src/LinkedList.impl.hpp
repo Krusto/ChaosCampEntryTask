@@ -1,5 +1,10 @@
 #include "LinkedList.hpp"
-#include <iostream>
+
+template <typename T>
+LinkedList<T>::~LinkedList()
+{
+    Destroy();
+}
 
 template <typename T>
 void LinkedList<T>::Insert(T data)
@@ -11,15 +16,14 @@ void LinkedList<T>::Insert(T data)
 }
 
 template <typename T>
-void LinkedList<T>::Print()
+void LinkedList<T>::ForEach(std::function<void(const T&)> func) const
 {
     Node* currentNode = m_Head;
     while (currentNode != nullptr)
     {
-        std::cout << currentNode->data << " ";
+        func(currentNode->data);
         currentNode = currentNode->next;
     }
-    std::cout << std::endl;
 }
 
 template <typename T>
@@ -32,10 +36,6 @@ inline void LinkedList<T>::Destroy()
         delete currentNode;
         currentNode = nextNode;
     }
-}
 
-template <typename T>
-LinkedList<T>::~LinkedList()
-{
-    Destroy();
+    m_Head = nullptr;
 }

@@ -1,85 +1,83 @@
 #include "BattleshipGame.hpp"
+#include "Log.hpp"
+
 #include <random>
-#include <stdio.h>
 #include <algorithm>
-#include "LinkedList.hpp"
 
 void BattleshipGame::Init(size_t width, size_t height, size_t numVessels, uint32_t vesselDetectionRange)
 {
     m_BoardSize = {width, height};
     m_DetectionRange = vesselDetectionRange;
     m_NumVessels = numVessels;
-    m_Vessels.reserve(numVessels);
+    m_Vessels.resize(numVessels);
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distributionX(0, width - 1);
-    std::uniform_int_distribution<> distributionY(0, height - 1);
+    GenerateVessels();
 
-    for (size_t i = 0; i < numVessels; i++)
-    {
-        size_t vesselX = distributionX(gen);
-        size_t vesselY = distributionY(gen);
-
-        m_Vessels.push_back({vesselX, vesselY});
-    }
-    printf("\n%zu %zu %zu %zu\n", m_BoardSize.x, m_BoardSize.y, m_NumVessels, m_DetectionRange);
+    Log("\n%zu %zu %zu %zu\n", m_BoardSize.x, m_BoardSize.y, m_NumVessels, m_DetectionRange);
 }
 
-void BattleshipGame::PrintMap()
+void BattleshipGame::Run()
 {
-    for (size_t y = 0; y < m_BoardSize.y; y++)
-    {
-        for (size_t x = 0; x < m_BoardSize.x; x++)
-        {
-            auto it = std::find(m_Vessels.begin(), m_Vessels.end(), Point{x, y});
-            if (it != m_Vessels.end()) { printf("X"); }
-            else { printf("."); }
-        }
-        printf("\n");
-    }
-}
-
-bool BattleshipGame::Run()
-{
-    PrintMap();
-
-    if (m_Vessels.size() == 0)
-    {
-        printf("Win!\n");
-        return true;
-    }
-
     Point point;
     scanf("%zu %zu", &point.x, &point.y);
 
+    if (TryHitVessel(point))
+    {
+        if (ShouldExit()) { Log("Win!\n"); }
+        return;
+    }
+    else
+    {
+        LinkedList<double> vesselDistances;
+        size_t vesselsInRadius = 0;
+        GetDistances(point, &vesselDistances, &vesselsInRadius);
+
+        Log("Miss %zu ", vesselsInRadius);
+        vesselDistances.ForEach([](const auto value) { Log("%.6f ", value); });
+        Log("\n");
+
+        vesselDistances.Destroy();
+    }
+}
+
+bool BattleshipGame::ShouldExit() { return m_Vessels.size() == 0; }
+
+void BattleshipGame::GenerateVessels()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> distributionX(0, m_BoardSize.x - 1);
+    std::uniform_int_distribution<size_t> distributionY(0, m_BoardSize.y - 1);
+
+    std::generate(m_Vessels.begin(), m_Vessels.end(), [&]() { return Point{distributionX(gen), distributionY(gen)}; });
+}
+
+bool BattleshipGame::TryHitVessel(const Point& point)
+{
     auto hitIt = std::find(m_Vessels.begin(), m_Vessels.end(), point);
-    bool hit = hitIt != m_Vessels.end();
 
-    if (hit)
+    if (hitIt != m_Vessels.end())
     {
-        printf("Hit!\n");
+        Log("Hit!\n");
         m_Vessels.erase(hitIt);
-        return 0;
+        return true;
     }
-
-    size_t numVesselsInRadius = 0;
-    LinkedList<double> vesselDistances;
-
-    for (auto vessel: m_Vessels)
-    {
-        size_t distanceSquared = GetDistanceSquared(point, vessel);
-        if (IsInRange(distanceSquared))
-        {
-            vesselDistances.Insert(std::sqrt(distanceSquared));
-            numVesselsInRadius++;
-        }
-    }
-
-    printf("Miss! %zu ", numVesselsInRadius);
-    vesselDistances.Print();
 
     return false;
+}
+
+void BattleshipGame::GetDistances(const Point& point, LinkedList<double>* distances, size_t* numVesselsInRadius)
+{
+    if (point.x >= m_BoardSize.x || point.y >= m_BoardSize.y) { return; }
+
+    std::for_each(m_Vessels.begin(), m_Vessels.end(), [&](const auto vessel) {
+        size_t distanceSquared = GetDistanceSquared(point, vessel);
+        if (IsVesselInRange(distanceSquared))
+        {
+            distances->Insert(std::sqrt(distanceSquared));
+            (*numVesselsInRadius)++;
+        }
+    });
 }
 
 size_t BattleshipGame::GetDistanceSquared(const Point& point, const Point& vessel) const
@@ -87,4 +85,4 @@ size_t BattleshipGame::GetDistanceSquared(const Point& point, const Point& vesse
     return ((point.x - vessel.x) * (point.x - vessel.x) + (point.y - vessel.y) * (point.y - vessel.y));
 }
 
-bool BattleshipGame::IsInRange(size_t distance) const { return distance <= m_DetectionRange * m_DetectionRange; }
+bool BattleshipGame::IsVesselInRange(size_t distance) const { return distance <= m_DetectionRange * m_DetectionRange; }

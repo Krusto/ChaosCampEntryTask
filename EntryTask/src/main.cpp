@@ -3,8 +3,8 @@
 int main()
 {
     BattleshipGame game;
-    game.Init(5, 5, 3, 3);
-    while (!game.Run()) {}
+    game.Init(10, 10, 6, 3);
+    while (!game.ShouldExit()) { game.Run(); }
 
     return 0;
 }
