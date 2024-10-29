@@ -1,6 +1,7 @@
 #include "BattleshipGame.hpp"
 #include "Log.hpp"
 
+#include <iostream>
 #include <random>
 #include <algorithm>
 
@@ -12,14 +13,13 @@ void BattleshipGame::Init(size_t width, size_t height, size_t numVessels, uint32
     m_Vessels.resize(numVessels);
 
     GenerateVessels();
-
-    Log("\n%zu %zu %zu %zu\n", m_BoardSize.x, m_BoardSize.y, m_NumVessels, m_DetectionRange);
+    Log(m_BoardSize.x, " ", m_BoardSize.y, " ", m_NumVessels, " ", m_DetectionRange);
 }
 
 void BattleshipGame::Run()
 {
     Point point;
-    scanf("%zu %zu", &point.x, &point.y);
+    std::cin >> point.x >> point.y;
 
     if (TryHitVessel(point))
     {
@@ -32,8 +32,8 @@ void BattleshipGame::Run()
         size_t vesselsInRadius = 0;
         GetDistances(point, &vesselDistances, &vesselsInRadius);
 
-        Log("Miss %zu ", vesselsInRadius);
-        vesselDistances.ForEach([](const auto value) { Log("%.6f ", value); });
+        Log("Miss ", vesselsInRadius, " ");
+        vesselDistances.ForEach([](const auto value) { Log(" ", value); });
         Log("\n");
 
         vesselDistances.Destroy();
